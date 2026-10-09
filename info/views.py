@@ -12,9 +12,27 @@ from search.helpers.photo import WikiCityPhotoHelper
 logger = logging.getLogger(__name__)
 
 
+def _city_from_query(params):
+    """The search page passes the chosen city's details, so we needn't geocode it again."""
+    try:
+        latitude, longitude = float(params["lat"]), float(params["lon"])
+    except (KeyError, ValueError):
+        return None
+    if not params.get("city") or not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+        return None
+    return {
+        "id": params.get("id") or None,
+        "name": params["city"],
+        "latitude": latitude,
+        "longitude": longitude,
+        "country_code": params.get("country", ""),
+        "admin1": params.get("region", ""),
+    }
+
+
 @require_http_methods(["GET"])
 def info_page(request):
-    city = GenericDBSearchAutoCompleteHelper().get_city(
+    city = _city_from_query(request.GET) or GenericDBSearchAutoCompleteHelper().get_city(
         city=request.GET.get("city"), country=request.GET.get("country")
     )
     if city is None:
@@ -31,6 +49,7 @@ def info_page(request):
     nearby = nearby.result()
 
     # Header fields used if the weather API is unavailable, so the page still renders.
+    # (the page then loads the weather in the visitor's browser instead).
     fallback_weather = {
         "city_name": city["name"],
         "state_code": city.get("admin1") or city.get("country", ""),
@@ -46,6 +65,7 @@ def info_page(request):
             "outdoor_info": nearby["landmarks"],
             "arts_info": nearby["arts"],
             "photo_link": _result_or(photo, None),
+            "city": city,
         }
     )
     # Let Vercel's CDN keep each city page for an hour (and serve it stale while refreshing),

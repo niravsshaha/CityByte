@@ -113,8 +113,22 @@ class InfoPageTests(TestCase):
         response = self.client.get("/city", {"city": "Pune", "country": "IN"})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Pune")
-        self.assertNotContains(response, "RealFeel Temperature")
+        # Weather cards start hidden; the browser fills them in from Open-Meteo directly.
+        self.assertContains(response, 'id="weather-cards" class="d-flex flex-wrap" style="margin: 1rem;" hidden')
+        self.assertContains(response, 'data-lat="18.520000"')
         self.assertNotContains(response, "Top Arts Spots")
+
+    @mock.patch("requests.post", side_effect=route_post)
+    @mock.patch("requests.get", side_effect=route_get)
+    def test_info_page_uses_coordinates_from_search_page(self, get, _post):
+        response = self.client.get("/city", {
+            "city": "Pune", "country": "IN", "region": "Maharashtra",
+            "lat": "18.52", "lon": "73.86", "id": "1259229",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(any("geocoding-api" in c.args[0] for c in get.call_args_list))
+        self.assertContains(response, "Maharashtra, IN")
+        self.assertContains(response, 'data-lat="18.520000"')
 
     @mock.patch("requests.get", return_value=fake_response({"results": []}))
     def test_unknown_city_redirects_home(self, _get):
