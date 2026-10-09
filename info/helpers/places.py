@@ -1,27 +1,46 @@
+import logging
 from abc import ABC, abstractmethod
 
+import requests
 from django.conf import settings
 
-from info.utils.places import PlacesUtilBase, FourSquare
+from info.utils.places import CATEGORY_CLASSES, WikidataAirports, WikidataPlaces, WikipediaGeoSearch
 from search.utils.url import URL
+
+logger = logging.getLogger(__name__)
+
+_FAILURES = (requests.RequestException, KeyError, ValueError)
 
 
 class CityPlacesHelperBase(ABC):
     @abstractmethod
-    def get_places(self, city: str, **kwargs):
+    def get_places(self, city: dict, **kwargs):
         pass
 
 
-class FourSquarePlacesHelper(CityPlacesHelperBase):
-    def __init__(self, klass: PlacesUtilBase = None, url: URL = None):
-        if url is None:
-            klass = FourSquare
-            url = URL(**settings.FOURSQUARE_CONFIG)
+class OpenPlacesHelper(CityPlacesHelperBase):
+    """
+    Places near a city from Wikipedia + Wikidata (free, keyless). If a source is slow or down,
+    its sections come back empty and the template hides them, instead of the page erroring.
+    """
 
-        self._places_util = klass(url=url)
+    def __init__(self):
+        wikidata = URL(**settings.WIKIDATA_CONFIG)
+        self._nearby = WikidataPlaces(url=wikidata, geosearch=WikipediaGeoSearch(URL(**settings.WIKIPEDIA_CONFIG)))
+        self._airports = WikidataAirports(url=wikidata)
 
-    def get_places(self, city: str, **kwargs):
-        return self._places_util.get_places(city=city, **kwargs)
+    def get_places(self, city: dict, **kwargs):
+        """{'dining': {'results': [...]}, 'landmarks': {...}, 'arts': {...}}"""
+        try:
+            places = self._nearby.get_places(city["latitude"], city["longitude"], **kwargs)
+        except _FAILURES as error:
+            logger.warning("Nearby places failed for %s: %s", city.get("name"), error)
+            places = {category: [] for category in CATEGORY_CLASSES}
+        return {category: {"results": found} for category, found in places.items()}
 
-    def get_place_photo(self, fsq_id: str):
-        return self._places_util.get_place_photo(fsq_id=fsq_id)
+    def get_airports(self, city: dict, **kwargs):
+        try:
+            return {"results": self._airports.get_places(city["latitude"], city["longitude"], **kwargs)}
+        except _FAILURES as error:
+            logger.warning("Airports failed for %s: %s", city.get("name"), error)
+            return {"results": []}
