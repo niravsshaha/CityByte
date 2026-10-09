@@ -79,14 +79,15 @@
             </div>
         </div>
     </div>
-    <div class="d-flex flex-wrap" style="margin: 1rem;">
+    <div id="weather-cards" class="d-flex flex-wrap" style="margin: 1rem;"{% if weather_info.temp is None %} hidden{% endif %}
+         data-lat="{{ city.latitude|stringformat:"f" }}" data-lon="{{ city.longitude|stringformat:"f" }}">
         <div class="card text-center">
             <div class="card-body">
                 <div class="card-subtitle">
                     Temperature
                 </div>
                 <div class="card-text">
-                    {{ weather_info.temp }} °C
+                    <span data-w="temp">{{ weather_info.temp }}</span> °C
                 </div>
             </div>
         </div>
@@ -96,7 +97,7 @@
                     RealFeel Temperature
                 </div>
                 <div class="card-text">
-                    {{ weather_info.app_temp }} °C
+                    <span data-w="app_temp">{{ weather_info.app_temp }}</span> °C
                 </div>
             </div>
         </div>
@@ -106,7 +107,7 @@
                     Pressure
                 </div>
                 <div class="card-text">
-                    {{ weather_info.pres }} mb
+                    <span data-w="pres">{{ weather_info.pres }}</span> mb
                 </div>
             </div>
         </div>
@@ -118,7 +119,7 @@
                             Wind Speed
                         </div>
                         <div class="card-text">
-                            {{ weather_info.wind_spd }} m/s
+                            <span data-w="wind_spd">{{ weather_info.wind_spd }}</span> m/s
                         </div>
                     </li>
                     <li class="list-group-item" style="padding-top: 0; padding-bottom: 0;">
@@ -126,7 +127,7 @@
                             Wind Direction
                         </div>
                         <div class="card-text">
-                            {{ weather_info.wind_dir }} °
+                            <span data-w="wind_dir">{{ weather_info.wind_dir }}</span> °
                         </div>
                     </li>
                 </ul>
@@ -138,7 +139,7 @@
                     Cloud Coverage
                 </div>
                 <div class="card-text">
-                    {{ weather_info.clouds }} %
+                    <span data-w="clouds">{{ weather_info.clouds }}</span> %
                 </div>
             </div>
         </div>
@@ -148,7 +149,7 @@
                     Precipitation
                 </div>
                 <div class="card-text">
-                    {{ weather_info.precip }} mm/hr
+                    <span data-w="precip">{{ weather_info.precip }}</span> mm/hr
                 </div>
             </div>
         </div>
@@ -158,7 +159,7 @@
                     UV Index
                 </div>
                 <div class="card-text">
-                    {{ weather_info.uv }}
+                    <span data-w="uv">{{ weather_info.uv }}</span>
                 </div>
             </div>
         </div>
@@ -168,7 +169,7 @@
                     Sunrise
                 </div>
                 <div class="card-text">
-                    {{ weather_info.sunrise }} AM
+                    <span data-w="sunrise">{{ weather_info.sunrise }}</span> AM
                 </div>
             </div>
         </div>
@@ -178,19 +179,20 @@
                     Sunset
                 </div>
                 <div class="card-text">
-                    {{ weather_info.sunset }} PM
+                    <span data-w="sunset">{{ weather_info.sunset }}</span> PM
                 </div>
             </div>
         </div>
     </div>
+    {% if dining_info.results %}
     <h2 style="margin: 4rem 0 1rem 1rem;">Top Rated Dining Spots</h2>
     <div class="d-flex flex-wrap" style="margin: 1rem;">
         {% for place in dining_info.results %}
             <div class="card" style="width: 18rem;">
-                <img src="{% url 'info:place_photo' %}?fsq_id={{ place.fsq_id }}" class="card-img-top" alt="{{ place.name }}">
+                {% if place.image %}<img src="{{ place.image }}" class="card-img-top" alt="{{ place.name }}" loading="lazy" style="height: 12rem; object-fit: cover;">{% endif %}
                 <div class="card-body">
                     <h5 class="card-title">{{ place.name }}</h5>
-                    <p class="card-text">{{ place.location.formatted_address }}</p>
+                    <p class="card-text">{{ place.location.formatted_address|truncatechars:120 }}</p>
                 </div>
                 <div class="card-footer">
                     {{ place.categories.0.name }}
@@ -198,14 +200,16 @@
             </div>
         {% endfor %}
     </div>
+    {% endif %}
+    {% if outdoor_info.results %}
     <h2 style="margin: 4rem 0 1rem 1rem;">Top Landmark Spots</h2>
     <div class="d-flex flex-wrap" style="margin: 1rem;">
         {% for place in outdoor_info.results %}
             <div class="card" style="width: 18rem;">
-                <img src="{% url 'info:place_photo' %}?fsq_id={{ place.fsq_id }}" class="card-img-top" alt="{{ place.name }}">
+                {% if place.image %}<img src="{{ place.image }}" class="card-img-top" alt="{{ place.name }}" loading="lazy" style="height: 12rem; object-fit: cover;">{% endif %}
                 <div class="card-body">
                     <h5 class="card-title">{{ place.name }}</h5>
-                    <p class="card-text">{{ place.location.formatted_address }}</p>
+                    <p class="card-text">{{ place.location.formatted_address|truncatechars:120 }}</p>
                 </div>
                 <div class="card-footer">
                     {{ place.categories.0.name }}
@@ -213,14 +217,16 @@
             </div>
         {% endfor %}
     </div>
+    {% endif %}
+    {% if arts_info.results %}
     <h2 style="margin: 4rem 0 1rem 1rem;">Top Arts Spots</h2>
     <div class="d-flex flex-wrap" style="margin: 1rem;">
         {% for place in arts_info.results %}
             <div class="card" style="width: 18rem;">
-                <img src="{% url 'info:place_photo' %}?fsq_id={{ place.fsq_id }}" class="card-img-top" alt="{{ place.name }}">
+                {% if place.image %}<img src="{{ place.image }}" class="card-img-top" alt="{{ place.name }}" loading="lazy" style="height: 12rem; object-fit: cover;">{% endif %}
                 <div class="card-body">
                     <h5 class="card-title">{{ place.name }}</h5>
-                    <p class="card-text">{{ place.location.formatted_address }}</p>
+                    <p class="card-text">{{ place.location.formatted_address|truncatechars:120 }}</p>
                 </div>
                 <div class="card-footer">
                     {{ place.categories.0.name }}
@@ -228,20 +234,60 @@
             </div>
         {% endfor %}
     </div>
+    {% endif %}
     {% if airport_info.results %}
         <h2 style="margin: 4rem 0 1rem 1rem;">Airports</h2>
         <div class="d-flex flex-wrap" style="margin: 1rem;">
             {% for place in airport_info.results %}
                 <div class="card" style="width: 18rem;">
-                    <img src="{% url 'info:place_photo' %}?fsq_id={{ place.fsq_id }}" class="card-img-top" alt="{{ place.name }}">
+                    {% if place.image %}<img src="{{ place.image }}" class="card-img-top" alt="{{ place.name }}" loading="lazy" style="height: 12rem; object-fit: cover;">{% endif %}
                     <div class="card-body">
                         <h5 class="card-title" style="font-size: 0.75rem">{{ place.name }}</h5>
-                        <p class="card-text" style="font-size: 1rem;">{{ place.location.formatted_address }}</p>
+                        <p class="card-text" style="font-size: 1rem;">{{ place.location.formatted_address|truncatechars:120 }}</p>
                     </div>
                 </div>
             {% endfor %}
         </div>
     {% endif %}
+    <p style="margin: 3rem 1rem 1rem; font-size: 0.75rem; opacity: 0.7;">
+        Weather &amp; city search: Open-Meteo &middot;
+        Places &amp; photos: Wikipedia, Wikidata and Wikimedia Commons
+    </p>
 </div>
+<script>
+    // Always refresh the weather from the visitor's browser: it's live (the page itself may be
+    // served from Vercel's cache) and still works when the server's request was rate-limited.
+    (function () {
+        var box = document.getElementById('weather-cards');
+        if (!box) return;
+        var fields = 'temperature_2m,apparent_temperature,surface_pressure,wind_speed_10m,' +
+            'wind_direction_10m,cloud_cover,precipitation,uv_index';
+        var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + box.dataset.lat +
+            '&longitude=' + box.dataset.lon + '&current=' + fields +
+            '&daily=sunrise,sunset&timezone=auto&wind_speed_unit=ms&forecast_days=1';
+        function clock(iso) {
+            var h = parseInt(iso.slice(11, 13), 10) % 12 || 12;
+            return (h < 10 ? '0' : '') + h + iso.slice(13, 16);
+        }
+        function set(key, value) {
+            var el = box.querySelector('[data-w="' + key + '"]');
+            if (el && value !== undefined && value !== null) el.textContent = value;
+        }
+        fetch(url).then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); }).then(function (d) {
+            var c = d.current;
+            set('temp', c.temperature_2m);
+            set('app_temp', c.apparent_temperature);
+            set('pres', Math.round(c.surface_pressure));
+            set('wind_spd', c.wind_speed_10m);
+            set('wind_dir', c.wind_direction_10m);
+            set('clouds', c.cloud_cover);
+            set('precip', c.precipitation);
+            set('uv', c.uv_index);
+            set('sunrise', clock(d.daily.sunrise[0]));
+            set('sunset', clock(d.daily.sunset[0]));
+            box.hidden = false;
+        }).catch(function () { /* keep whatever the server rendered */ });
+    })();
+</script>
 </body>
 </html>
