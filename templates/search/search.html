@@ -130,18 +130,53 @@
         url.searchParams.set('q', city);
 
         xhr.onload = function(e) {
-            callback(city, this.responseText);
+            let results = [];
+            try { results = JSON.parse(this.responseText).results; } catch (err) {}
+
+            if (this.status === 200 && results.length !== 0) {
+                callback(city, this.responseText);
+            } else {
+                getCityListFromBrowser(city, callback);
+            }
+        }
+        xhr.onerror = function(e) {
+            getCityListFromBrowser(city, callback);
         }
 
         xhr.open('GET', url, true);
         xhr.send();
     }
 
+    // Fallback: ask Open-Meteo directly from the browser if our server couldn't
+    // (e.g. its shared IP was rate-limited). Same response shape as /api/search/city.
+    function getCityListFromBrowser(city, callback) {
+        let url = new URL('https://geocoding-api.open-meteo.com/v1/search');
+        url.searchParams.set('name', city);
+        url.searchParams.set('count', '10');
+        url.searchParams.set('language', 'en');
+
+        fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+            let results = (data.results || []).map(function(c) {
+                return {
+                    name: c.name, region: c.admin1 || '', country: c.country || '',
+                    geonames_id: c.id, latitude: c.latitude, longitude: c.longitude,
+                    address: {countryCode: c.country_code || ''}
+                };
+            });
+            callback(city, JSON.stringify({results: results}));
+        }).catch(function() {});
+    }
+
     function redict_to_info(city, citiesJSON) {
         let citySuggestions = JSON.parse(citiesJSON).results;
 
         if (citySuggestions.length !== 0) {
-            location.href = "{% url "info_page" %}?city=" + encodeURIComponent(citySuggestions[0].name) + "&country=" + encodeURIComponent(citySuggestions[0].address.countryCode);
+            let c = citySuggestions[0];
+            let params = new URLSearchParams({
+                city: c.name, country: c.address.countryCode, region: c.region || '',
+                lat: c.latitude, lon: c.longitude, id: c.geonames_id || ''
+            });
+            location.href = "{% url "info_page" %}?" + params.toString();
         }
     }
 
