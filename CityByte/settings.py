@@ -62,6 +62,9 @@ ROOT_URLCONF = 'CityByte.urls'
 
 CORS_ALLOW_ALL_ORIGINS = True
 
+# Vercel terminates HTTPS in front of Django; trust its forwarded-protocol header.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -133,50 +136,40 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-GEODB_CONFIG = {
+# --- External APIs -------------------------------------------------------------
+# Every data source below is free and needs no API key or account.
+
+HTTP_USER_AGENT = "CityByte/1.0 (https://github.com/niravsshaha/CityByte)"
+HTTP_TIMEOUT = 8  # seconds per outbound request
+SPARQL_TIMEOUT = 20  # Wikidata queries can take a few seconds
+
+OPEN_METEO_GEOCODING_CONFIG = {  # city search / autocomplete
     "protocol": "https",
-    "host": "wft-geo-db.p.rapidapi.com",
+    "host": "geocoding-api.open-meteo.com",
     "port": 443,
-    "headers": {
-        'x-rapidapi-key': os.environ.get("GEODB_X_RAPID_API_KEY"),
-        'x-rapidapi-host': os.environ.get("GEODB_X_RAPID_API_HOST")
-    }
 }
 
-AMADEUS_CONFIG = {
+OPEN_METEO_FORECAST_CONFIG = {  # current weather, sunrise and sunset
     "protocol": "https",
-    "host": "test.api.amadeus.com",
+    "host": "api.open-meteo.com",
     "port": 443,
-    "headers": {
-        "API_KEY": os.environ.get("AMADEUS_API_KEY"),
-        "API_SECRET_KEY": os.environ.get("AMADEUS_API_SECRET_KEY"),
-    }
 }
 
-UNSPLASH_CONFIG = {
+WIKIDATA_CONFIG = {  # city photos, landmarks, arts spots, airports
     "protocol": "https",
-    "host": "api.unsplash.com",
+    "host": "query.wikidata.org",
     "port": 443,
-    "headers": {
-        'Authorization': f"Client-ID {os.environ.get('UNSPLASH_API_KEY')}",
-    }
 }
 
-FOURSQUARE_CONFIG = {
+WIKIPEDIA_CONFIG = {  # nearby-places lookup, fallback city photo
     "protocol": "https",
-    "host": "api.foursquare.com",
+    "host": "en.wikipedia.org",
     "port": 443,
-    "headers": {
-        'Authorization': os.environ.get("FOURSQUARE_API_KEY"),
-    }
 }
 
-WEATHER_BIT_CONFIG = {
-    "protocol": "https",
-    "host": "weatherbit-v1-mashape.p.rapidapi.com",
-    "port": 443,
-    "headers": {
-        'X-RapidAPI-Key': os.environ.get("WEATHER_BIT_X_RAPID_API_KEY"),
-        'X-RapidAPI-Host': os.environ.get("WEATHER_BIT_X_RAPID_API_HOST"),
-    }
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": "WARNING"},
 }
