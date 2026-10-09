@@ -1,0 +1,8 @@
+{
+  "builds": [
+    { "src": "CityByte/wsgi.py", "use": "@vercel/python" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "CityByte/wsgi.py" }
+  ]
+}
