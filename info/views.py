@@ -1,52 +1,62 @@
-from datetime import datetime
+import logging
+from concurrent.futures import ThreadPoolExecutor
 
-import pytz
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_http_methods
 
-from info.helpers.places import FourSquarePlacesHelper
-from info.helpers.weather import WeatherBitHelper
-from search.helpers.photo import UnplashCityPhotoHelper
+from info.helpers.places import OpenPlacesHelper
+from info.helpers.weather import OpenMeteoWeatherHelper
+from search.helpers.autocomplete import GenericDBSearchAutoCompleteHelper
+from search.helpers.photo import WikiCityPhotoHelper
 
-
-@require_http_methods(["GET"])
-def place_photo(request):
-    photo_link = FourSquarePlacesHelper().get_place_photo(fsq_id=request.GET.get('fsq_id'))
-    return redirect(photo_link)
+logger = logging.getLogger(__name__)
 
 
 @require_http_methods(["GET"])
 def info_page(request):
-    city = request.GET.get("city")
-    country = request.GET.get("country")
+    city = GenericDBSearchAutoCompleteHelper().get_city(
+        city=request.GET.get("city"), country=request.GET.get("country")
+    )
+    if city is None:
+        return redirect("main_page")
 
-    weather_info = WeatherBitHelper().get_city_weather(city=city, country=country)["data"][0]
+    places = OpenPlacesHelper()
 
-    weather_info["sunrise"] = datetime.strptime(weather_info["sunrise"], "%H:%M").astimezone(
-        pytz.timezone(weather_info['timezone'])).strftime("%I:%M")
-    weather_info["sunset"] = datetime.strptime(weather_info["sunset"], "%H:%M").astimezone(
-        pytz.timezone(weather_info['timezone'])).strftime("%I:%M")
-    weather_info["ts"] = datetime.fromtimestamp(weather_info["ts"]).strftime("%m-%d-%Y, %H:%M")
+    # Each section comes from a different open API, so fetch them all at once.
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        weather = pool.submit(OpenMeteoWeatherHelper().get_city_weather, city)
+        photo = pool.submit(WikiCityPhotoHelper().get_city_photo, city["name"], city.get("id"))
+        nearby = pool.submit(places.get_places, city, limit=5)
+        airports = pool.submit(places.get_airports, city, limit=5)
+    nearby = nearby.result()
 
-    dining_info = FourSquarePlacesHelper().get_places(
-        city=f"{city}, {country}", categories="13065", sort="RELEVANCE", limit=5)
-    airport_info = FourSquarePlacesHelper().get_places(
-        city=f"{city}, {country}", categories="19040", sort="RELEVANCE", limit=5)
-    outdoor_info = FourSquarePlacesHelper().get_places(
-        city=f"{city}, {country}", categories="16000", sort="RELEVANCE", limit=5)
-    arts_info = FourSquarePlacesHelper().get_places(
-        city=f"{city}, {country}", categories="10000", sort="RELEVANCE", limit=5)
+    # Header fields used if the weather API is unavailable, so the page still renders.
+    fallback_weather = {
+        "city_name": city["name"],
+        "state_code": city.get("admin1") or city.get("country", ""),
+        "country_code": city.get("country_code", ""),
+    }
 
-    photo_link = UnplashCityPhotoHelper().get_city_photo(city=city)
-
-    return render(
+    response = render(
         request, 'search/city_info.html',
         context={
-            "weather_info": weather_info,
-            "dining_info": dining_info,
-            "airport_info": airport_info,
-            "outdoor_info": outdoor_info,
-            "arts_info": arts_info,
-            "photo_link": photo_link,
+            "weather_info": _result_or(weather, fallback_weather),
+            "dining_info": nearby["dining"],
+            "airport_info": airports.result(),
+            "outdoor_info": nearby["landmarks"],
+            "arts_info": nearby["arts"],
+            "photo_link": _result_or(photo, None),
         }
     )
+    # Let Vercel's CDN keep each city page for an hour (and serve it stale while refreshing),
+    # so repeat visits are instant and we stay polite to the free APIs.
+    response["Cache-Control"] = "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400"
+    return response
+
+
+def _result_or(future, default):
+    try:
+        return future.result()
+    except Exception as error:  # a third-party API failing shouldn't take the page down
+        logger.warning("City info section failed: %s", error)
+        return default
