@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <title>Bootstrap AutoComplete Demo Bootstrap 4</title>
+    <title>CityByte</title>
 
     <!-- Required meta tags -->
     <meta charset="utf-8">
@@ -85,7 +85,7 @@
             let cityFirstSuggestion = citySuggestions[0].name;
 
             clearTimeout(timeout1);
-            timeout1 = setTimeout(getCityPhoto, 100, cityFirstSuggestion, updateBackground);
+            timeout1 = setTimeout(getCityPhoto, 100, cityFirstSuggestion, citySuggestions[0].geonames_id, updateBackground);
 
             document.getElementById('suggestion-before').innerHTML = cityFirstSuggestion.slice(0, cityFirstSuggestion.indexOf(city));
             document.getElementById('suggestion-after').innerHTML = cityFirstSuggestion.slice(cityFirstSuggestion.indexOf(city) + city.length);
@@ -103,11 +103,12 @@
         }
     }
 
-    function getCityPhoto(city, callback1) {
+    function getCityPhoto(city, geonamesId, callback1) {
         let xhr1 = new XMLHttpRequest();
 
-        let url1 = new URL('{{ request.scheme }}://{{ request.get_host }}{% url 'search:city_photo' %}');
+        let url1 = new URL('{% url 'search:city_photo' %}', window.location.origin);
         url1.searchParams.set('q', city);
+        if (geonamesId) url1.searchParams.set('id', geonamesId);
 
         xhr1.onload = function(e) {
             callback1(this.responseText);
@@ -125,7 +126,7 @@
             return;
         }
 
-        let url = new URL('{{ request.scheme }}://{{ request.get_host }}{% url 'search:city_search' %}');
+        let url = new URL('{% url 'search:city_search' %}', window.location.origin);
         url.searchParams.set('q', city);
 
         xhr.onload = function(e) {
@@ -140,7 +141,7 @@
         let citySuggestions = JSON.parse(citiesJSON).results;
 
         if (citySuggestions.length !== 0) {
-            location.href = "{% url "info_page" %}?city=" + citySuggestions[0].name + "&country=" + citySuggestions[0].address.countryCode;
+            location.href = "{% url "info_page" %}?city=" + encodeURIComponent(citySuggestions[0].name) + "&country=" + encodeURIComponent(citySuggestions[0].address.countryCode);
         }
     }
 

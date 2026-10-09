@@ -79,6 +79,7 @@
             </div>
         </div>
     </div>
+    {% if weather_info.temp is not None %}
     <div class="d-flex flex-wrap" style="margin: 1rem;">
         <div class="card text-center">
             <div class="card-body">
@@ -183,14 +184,16 @@
             </div>
         </div>
     </div>
+    {% endif %}
+    {% if dining_info.results %}
     <h2 style="margin: 4rem 0 1rem 1rem;">Top Rated Dining Spots</h2>
     <div class="d-flex flex-wrap" style="margin: 1rem;">
         {% for place in dining_info.results %}
             <div class="card" style="width: 18rem;">
-                <img src="{% url 'info:place_photo' %}?fsq_id={{ place.fsq_id }}" class="card-img-top" alt="{{ place.name }}">
+                {% if place.image %}<img src="{{ place.image }}" class="card-img-top" alt="{{ place.name }}" loading="lazy" style="height: 12rem; object-fit: cover;">{% endif %}
                 <div class="card-body">
                     <h5 class="card-title">{{ place.name }}</h5>
-                    <p class="card-text">{{ place.location.formatted_address }}</p>
+                    <p class="card-text">{{ place.location.formatted_address|truncatechars:120 }}</p>
                 </div>
                 <div class="card-footer">
                     {{ place.categories.0.name }}
@@ -198,14 +201,16 @@
             </div>
         {% endfor %}
     </div>
+    {% endif %}
+    {% if outdoor_info.results %}
     <h2 style="margin: 4rem 0 1rem 1rem;">Top Landmark Spots</h2>
     <div class="d-flex flex-wrap" style="margin: 1rem;">
         {% for place in outdoor_info.results %}
             <div class="card" style="width: 18rem;">
-                <img src="{% url 'info:place_photo' %}?fsq_id={{ place.fsq_id }}" class="card-img-top" alt="{{ place.name }}">
+                {% if place.image %}<img src="{{ place.image }}" class="card-img-top" alt="{{ place.name }}" loading="lazy" style="height: 12rem; object-fit: cover;">{% endif %}
                 <div class="card-body">
                     <h5 class="card-title">{{ place.name }}</h5>
-                    <p class="card-text">{{ place.location.formatted_address }}</p>
+                    <p class="card-text">{{ place.location.formatted_address|truncatechars:120 }}</p>
                 </div>
                 <div class="card-footer">
                     {{ place.categories.0.name }}
@@ -213,14 +218,16 @@
             </div>
         {% endfor %}
     </div>
+    {% endif %}
+    {% if arts_info.results %}
     <h2 style="margin: 4rem 0 1rem 1rem;">Top Arts Spots</h2>
     <div class="d-flex flex-wrap" style="margin: 1rem;">
         {% for place in arts_info.results %}
             <div class="card" style="width: 18rem;">
-                <img src="{% url 'info:place_photo' %}?fsq_id={{ place.fsq_id }}" class="card-img-top" alt="{{ place.name }}">
+                {% if place.image %}<img src="{{ place.image }}" class="card-img-top" alt="{{ place.name }}" loading="lazy" style="height: 12rem; object-fit: cover;">{% endif %}
                 <div class="card-body">
                     <h5 class="card-title">{{ place.name }}</h5>
-                    <p class="card-text">{{ place.location.formatted_address }}</p>
+                    <p class="card-text">{{ place.location.formatted_address|truncatechars:120 }}</p>
                 </div>
                 <div class="card-footer">
                     {{ place.categories.0.name }}
@@ -228,20 +235,25 @@
             </div>
         {% endfor %}
     </div>
+    {% endif %}
     {% if airport_info.results %}
         <h2 style="margin: 4rem 0 1rem 1rem;">Airports</h2>
         <div class="d-flex flex-wrap" style="margin: 1rem;">
             {% for place in airport_info.results %}
                 <div class="card" style="width: 18rem;">
-                    <img src="{% url 'info:place_photo' %}?fsq_id={{ place.fsq_id }}" class="card-img-top" alt="{{ place.name }}">
+                    {% if place.image %}<img src="{{ place.image }}" class="card-img-top" alt="{{ place.name }}" loading="lazy" style="height: 12rem; object-fit: cover;">{% endif %}
                     <div class="card-body">
                         <h5 class="card-title" style="font-size: 0.75rem">{{ place.name }}</h5>
-                        <p class="card-text" style="font-size: 1rem;">{{ place.location.formatted_address }}</p>
+                        <p class="card-text" style="font-size: 1rem;">{{ place.location.formatted_address|truncatechars:120 }}</p>
                     </div>
                 </div>
             {% endfor %}
         </div>
     {% endif %}
+    <p style="margin: 3rem 1rem 1rem; font-size: 0.75rem; opacity: 0.7;">
+        Weather &amp; city search: Open-Meteo &middot;
+        Places &amp; photos: Wikipedia, Wikidata and Wikimedia Commons
+    </p>
 </div>
 </body>
 </html>
