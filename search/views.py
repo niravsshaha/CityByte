@@ -22,6 +22,8 @@ def city_suggestions(request):
                 "region": city.get("admin1", ""),
                 "country": city.get("country", ""),
                 "geonames_id": city.get("id"),
+                "latitude": city.get("latitude"),
+                "longitude": city.get("longitude"),
                 "address": {"countryCode": city.get("country_code", "")},
             }
             for city in suggestions
