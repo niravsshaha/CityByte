@@ -1,208 +1,522 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <title>CityByte</title>
-
-    <!-- Required meta tags -->
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-    <!-- CSS only -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT" crossorigin="anonymous">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CityByte — explore any city</title>
+    <meta name="description" content="Search any city to see live weather, landmarks, museums, places to eat and nearby airports.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
+        :root {
+            --ink: #f6f7f2;
+            --muted: rgba(246, 247, 242, 0.72);
+            --glass: rgba(18, 22, 20, 0.55);
+            --glass-strong: rgba(18, 22, 20, 0.82);
+            --line: rgba(255, 255, 255, 0.16);
+            --accent: #9be38c;
+            --accent-ink: #10220c;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body { height: 100%; }
+
         body {
-            padding: 0;
             margin: 0;
-            border: none;
-            background-color: #3F3F3F;
+            font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            color: var(--ink);
+            background: #1b211e;
+            overflow-x: hidden;
         }
 
-        .container {
-            margin: auto;
+        /* Two stacked photo layers so the background can cross-fade between cities. */
+        .bg {
+            position: fixed;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transform: scale(1.04);
+            transition: opacity 0.9s ease, transform 6s ease;
+        }
+        .bg.show { opacity: 1; transform: scale(1); }
+        .bg-default {
+            opacity: 1;
+            transform: none;
+            background:
+                radial-gradient(1200px 600px at 15% 10%, rgba(155, 227, 140, 0.18), transparent 60%),
+                radial-gradient(900px 500px at 90% 90%, rgba(120, 170, 255, 0.16), transparent 60%),
+                linear-gradient(160deg, #1d2622 0%, #141917 100%);
+        }
+        .shade {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(10, 12, 11, 0.55) 0%, rgba(10, 12, 11, 0.25) 40%, rgba(10, 12, 11, 0.75) 100%);
         }
 
-        .search-box, .search-box-suggestion {
-            position: absolute;
-            top: 30vh;
+        .page {
+            position: relative;
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
         }
 
-        .search-box-suggestion {
-            overflow: hidden;
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 22px clamp(16px, 5vw, 56px);
+        }
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 1.35rem;
+            letter-spacing: -0.02em;
+            color: var(--ink);
+            text-decoration: none;
+        }
+        .brand-mark {
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
+            background: var(--accent);
+            color: var(--accent-ink);
+            display: grid;
+            place-items: center;
+            font-size: 0.95rem;
+            font-weight: 800;
+        }
+        .credit {
+            font-size: 0.8rem;
+            color: var(--muted);
+            max-width: 46ch;
+            text-align: right;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+        }
+        .credit.show { opacity: 1; }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 0 clamp(16px, 5vw, 56px) 8vh;
+            max-width: 980px;
+            width: 100%;
+            margin: 0 auto;
         }
 
-        #query, #suggestion, #suggestion-before, #suggestion-after {
-            /*position: absolute;*/
-            font-size: 10rem;
-            color: #f5f9e9;
+        .eyebrow {
+            display: inline-block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 14px;
+        }
+        h1 {
+            margin: 0 0 14px;
+            font-size: clamp(2.4rem, 7vw, 4.6rem);
+            line-height: 1.02;
+            letter-spacing: -0.035em;
+            font-weight: 800;
+            text-shadow: 0 2px 30px rgba(0, 0, 0, 0.35);
+        }
+        .lede {
+            margin: 0 0 34px;
+            font-size: clamp(1rem, 2.2vw, 1.2rem);
+            color: var(--muted);
+            max-width: 52ch;
+            line-height: 1.55;
         }
 
-        #suggestion, #suggestion-before, #suggestion-after {
-            /*overflow: hidden;*/
-
-            z-index: 1;
+        .search {
+            position: relative;
         }
-
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 8px 8px 22px;
+            border-radius: 18px;
+            background: var(--glass);
+            border: 1px solid var(--line);
+            backdrop-filter: blur(18px) saturate(140%);
+            -webkit-backdrop-filter: blur(18px) saturate(140%);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+            transition: border-color 0.2s ease, background 0.2s ease;
+        }
+        .search-box:focus-within {
+            border-color: rgba(155, 227, 140, 0.65);
+            background: var(--glass-strong);
+        }
+        .search-box svg { flex: none; opacity: 0.8; }
         #query {
+            flex: 1;
+            min-width: 0;
+            border: 0;
+            outline: none;
             background: transparent;
+            color: var(--ink);
+            font: inherit;
+            font-size: clamp(1.1rem, 2.6vw, 1.45rem);
+            font-weight: 500;
+            padding: 12px 0;
+        }
+        #query::placeholder { color: rgba(246, 247, 242, 0.5); }
+        .go {
+            flex: none;
+            border: 0;
+            border-radius: 12px;
+            padding: 14px 22px;
+            background: var(--accent);
+            color: var(--accent-ink);
+            font: inherit;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.15s ease, filter 0.15s ease;
+        }
+        .go:hover { filter: brightness(1.06); }
+        .go:active { transform: scale(0.97); }
 
-            padding: 0;
+        .suggestions {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: calc(100% + 10px);
+            margin: 0;
+            padding: 6px;
+            list-style: none;
+            border-radius: 16px;
+            background: var(--glass-strong);
+            border: 1px solid var(--line);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+            z-index: 5;
+        }
+        .suggestions[hidden] { display: none; }
+        .suggestions li {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 12px 14px;
+            border-radius: 11px;
+            cursor: pointer;
+        }
+        .suggestions li[aria-selected="true"], .suggestions li:hover {
+            background: rgba(255, 255, 255, 0.09);
+        }
+        .s-name { font-weight: 600; font-size: 1.05rem; }
+        .s-place { color: var(--muted); font-size: 0.9rem; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .s-empty { color: var(--muted); padding: 12px 14px; }
 
-            color: transparent;
-            border-color: inherit;
-            -webkit-box-shadow: none;
-            box-shadow: none;
-            caret-color: transparent;
+        .popular {
+            margin-top: 26px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+        .popular span {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-right: 4px;
+        }
+        .chip {
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.07);
+            color: var(--ink);
+            font: inherit;
+            font-size: 0.92rem;
+            font-weight: 500;
+            padding: 8px 14px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        .chip:hover { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.3); }
 
-            z-index: 2;
+        .features {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 56px;
+        }
+        .feature {
+            padding: 16px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .feature b { display: block; font-size: 0.95rem; margin: 8px 0 4px; }
+        .feature small { color: var(--muted); font-size: 0.82rem; line-height: 1.45; }
+        .feature .icon { font-size: 1.3rem; }
+
+        footer {
+            padding: 18px clamp(16px, 5vw, 56px) 24px;
+            font-size: 0.78rem;
+            color: rgba(246, 247, 242, 0.55);
+        }
+        footer a { color: inherit; }
+
+        .loading .go { opacity: 0.7; pointer-events: none; }
+
+        @media (max-width: 720px) {
+            .features { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 40px; }
+            .credit { display: none; }
+            .go { padding: 12px 16px; }
+            .search-box { padding-left: 16px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .bg { transition: opacity 0.3s ease; transform: none !important; }
         }
     </style>
-
 </head>
 <body>
-<!-- JavaScript Bundle with Popper -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-u1OknCvxWvY5kfmNBILK2hRnQC3Pr17a+RTT6rIHI7NnikvbZlHgTPOOmMi466C8" crossorigin="anonymous"></script>
+<div class="bg bg-default" aria-hidden="true"></div>
+<div class="bg" id="bg-a" aria-hidden="true"></div>
+<div class="bg" id="bg-b" aria-hidden="true"></div>
+<div class="shade" aria-hidden="true"></div>
 
-<nav class="navbar navbar-dark bg-dark">
-    <a class="navbar-brand" href="#" style="font-size: 3rem; font-weight: bolder; padding: 1rem 3rem;">
-        CityByte
-    </a>
-</nav>
+<div class="page">
+    <header>
+        <a class="brand" href="{% url 'main_page' %}"><span class="brand-mark">CB</span>CityByte</a>
+        <div class="credit" id="credit"></div>
+    </header>
 
-<div class="container">
-    <div class="search-box"><input type="text" class="form-control" id="query" spellcheck="false" autocomplete="off" onkeyup="getSuggestions(event)" placeholder="Type a city"></div>
-    <div class="search-box-suggestion"><span id="suggestion-before"></span><span id="suggestion"></span><span id="suggestion-after"></span></div>
+    <main>
+        <span class="eyebrow">Explore any city</span>
+        <h1>Where to next?</h1>
+        <p class="lede">Live weather, famous landmarks, museums, places to eat and the nearest airports for any city in the world.</p>
+
+        <form class="search" id="search-form" autocomplete="off" role="search">
+            <div class="search-box">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+                    <path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <input type="text" id="query" spellcheck="false" placeholder="Search a city, e.g. Kyoto"
+                       role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions"
+                       aria-label="City name">
+                <button class="go" type="submit">Explore</button>
+            </div>
+            <ul class="suggestions" id="suggestions" role="listbox" hidden></ul>
+        </form>
+
+        <div class="popular">
+            <span>Popular:</span>
+            <button class="chip" type="button" data-city="Paris">Paris</button>
+            <button class="chip" type="button" data-city="Tokyo">Tokyo</button>
+            <button class="chip" type="button" data-city="New York">New York</button>
+            <button class="chip" type="button" data-city="Pune">Pune</button>
+            <button class="chip" type="button" data-city="Cape Town">Cape Town</button>
+            <button class="chip" type="button" data-city="Rome">Rome</button>
+        </div>
+
+        <div class="features">
+            <div class="feature"><span class="icon">&#9925;</span><b>Live weather</b><small>Temperature, wind, UV, sunrise and sunset</small></div>
+            <div class="feature"><span class="icon">&#127963;</span><b>Landmarks</b><small>The most notable sights nearby</small></div>
+            <div class="feature"><span class="icon">&#127912;</span><b>Arts &amp; culture</b><small>Museums, galleries and theatres</small></div>
+            <div class="feature"><span class="icon">&#9992;</span><b>Getting there</b><small>Airports within an hour's reach</small></div>
+        </div>
+    </main>
+
+    <footer>
+        Data from <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>,
+        <a href="https://www.wikidata.org/" target="_blank" rel="noopener">Wikidata</a> and
+        <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a>.
+    </footer>
 </div>
 
 <script>
-    var timeout = null;
-    var timeout1 = null;
+    (function () {
+        var SEARCH_URL = "{% url 'search:city_search' %}";
+        var PHOTO_URL = "{% url 'search:city_photo' %}";
+        var INFO_URL = "{% url 'info_page' %}";
 
-    function reflectSuggestions(city, citiesJSON) {
-        let citySuggestions = JSON.parse(citiesJSON).results;
+        var form = document.getElementById('search-form');
+        var input = document.getElementById('query');
+        var list = document.getElementById('suggestions');
+        var credit = document.getElementById('credit');
+        var layers = [document.getElementById('bg-a'), document.getElementById('bg-b')];
+        var activeLayer = 0;
 
-        if (citySuggestions.length !== 0) {
-            let cityFirstSuggestion = citySuggestions[0].name;
+        var results = [];
+        var selected = -1;
+        var typingTimer = null;
+        var photoTimer = null;
+        var lastQuery = '';
+        var shownPhotoFor = null;
 
-            clearTimeout(timeout1);
-            timeout1 = setTimeout(getCityPhoto, 100, cityFirstSuggestion, citySuggestions[0].geonames_id, updateBackground);
-
-            document.getElementById('suggestion-before').innerHTML = cityFirstSuggestion.slice(0, cityFirstSuggestion.indexOf(city));
-            document.getElementById('suggestion-after').innerHTML = cityFirstSuggestion.slice(cityFirstSuggestion.indexOf(city) + city.length);
-        }
-    }
-
-    function updateBackground(pathJSON) {
-        let path = JSON.parse(pathJSON).path;
-
-        if (path != null) {
-            document.body.style.background = null;
-            document.body.style.backgroundImage = "url('" + path + "')";
-            document.body.style.backgroundSize = "cover";
-            document.body.style.backgroundRepeat = "no-repeat";
-        }
-    }
-
-    function getCityPhoto(city, geonamesId, callback1) {
-        let xhr1 = new XMLHttpRequest();
-
-        let url1 = new URL('{% url 'search:city_photo' %}', window.location.origin);
-        url1.searchParams.set('q', city);
-        if (geonamesId) url1.searchParams.set('id', geonamesId);
-
-        xhr1.onload = function(e) {
-            callback1(this.responseText);
+        function escapeHtml(text) {
+            return String(text).replace(/[&<>"']/g, function (ch) {
+                return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch];
+            });
         }
 
-        xhr1.open('GET', url1, true);
-        xhr1.send();
-    }
-
-    function getCityList(callback) {
-        let xhr = new XMLHttpRequest();
-        let city = document.getElementById("query").value;
-
-        if (city.length === 0) {
-            return;
+        // Server first; if it fails or is rate-limited, ask Open-Meteo straight from the browser.
+        function fetchCities(query) {
+            var url = new URL(SEARCH_URL, window.location.origin);
+            url.searchParams.set('q', query);
+            return fetch(url).then(function (r) {
+                return r.ok ? r.json() : Promise.reject(r.status);
+            }).then(function (data) {
+                return data.results && data.results.length ? data.results : fetchCitiesFromBrowser(query);
+            }).catch(function () {
+                return fetchCitiesFromBrowser(query);
+            });
         }
 
-        let url = new URL('{% url 'search:city_search' %}', window.location.origin);
-        url.searchParams.set('q', city);
+        function fetchCitiesFromBrowser(query) {
+            var url = new URL('https://geocoding-api.open-meteo.com/v1/search');
+            url.searchParams.set('name', query);
+            url.searchParams.set('count', '10');
+            url.searchParams.set('language', 'en');
+            return fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+                return (data.results || []).map(function (c) {
+                    return {
+                        name: c.name, region: c.admin1 || '', country: c.country || '',
+                        geonames_id: c.id, latitude: c.latitude, longitude: c.longitude,
+                        address: {countryCode: c.country_code || ''}
+                    };
+                });
+            }).catch(function () { return []; });
+        }
 
-        xhr.onload = function(e) {
-            let results = [];
-            try { results = JSON.parse(this.responseText).results; } catch (err) {}
-
-            if (this.status === 200 && results.length !== 0) {
-                callback(city, this.responseText);
-            } else {
-                getCityListFromBrowser(city, callback);
+        function render() {
+            if (!input.value.trim()) {
+                list.hidden = true;
+                input.setAttribute('aria-expanded', 'false');
+                return;
             }
+            if (!results.length) {
+                list.innerHTML = '<li class="s-empty">No cities found</li>';
+            } else {
+                list.innerHTML = results.slice(0, 6).map(function (c, i) {
+                    var place = [c.region, c.country].filter(Boolean).join(', ');
+                    return '<li role="option" data-index="' + i + '" aria-selected="' + (i === selected) + '">' +
+                        '<span class="s-name">' + escapeHtml(c.name) + '</span>' +
+                        '<span class="s-place">' + escapeHtml(place) + '</span></li>';
+                }).join('');
+            }
+            list.hidden = false;
+            input.setAttribute('aria-expanded', 'true');
         }
-        xhr.onerror = function(e) {
-            getCityListFromBrowser(city, callback);
-        }
 
-        xhr.open('GET', url, true);
-        xhr.send();
-    }
+        function showPhoto(city) {
+            if (!city || shownPhotoFor === city.geonames_id) return;
+            shownPhotoFor = city.geonames_id;
+            var url = new URL(PHOTO_URL, window.location.origin);
+            url.searchParams.set('q', city.name);
+            if (city.geonames_id) url.searchParams.set('id', city.geonames_id);
 
-    // Fallback: ask Open-Meteo directly from the browser if our server couldn't
-    // (e.g. its shared IP was rate-limited). Same response shape as /api/search/city.
-    function getCityListFromBrowser(city, callback) {
-        let url = new URL('https://geocoding-api.open-meteo.com/v1/search');
-        url.searchParams.set('name', city);
-        url.searchParams.set('count', '10');
-        url.searchParams.set('language', 'en');
-
-        fetch(url).then(function(r) { return r.json(); }).then(function(data) {
-            let results = (data.results || []).map(function(c) {
-                return {
-                    name: c.name, region: c.admin1 || '', country: c.country || '',
-                    geonames_id: c.id, latitude: c.latitude, longitude: c.longitude,
-                    address: {countryCode: c.country_code || ''}
+            fetch(url).then(function (r) { return r.json(); }).then(function (data) {
+                if (!data.path || shownPhotoFor !== city.geonames_id) return;
+                var img = new Image();
+                img.onload = function () {
+                    var next = layers[1 - activeLayer];
+                    next.style.backgroundImage = 'url("' + data.path.replace(/"/g, '%22') + '")';
+                    next.classList.add('show');
+                    layers[activeLayer].classList.remove('show');
+                    activeLayer = 1 - activeLayer;
+                    credit.textContent = [city.name, city.region, city.country].filter(Boolean).join(' · ');
+                    credit.classList.add('show');
                 };
-            });
-            callback(city, JSON.stringify({results: results}));
-        }).catch(function() {});
-    }
-
-    function redict_to_info(city, citiesJSON) {
-        let citySuggestions = JSON.parse(citiesJSON).results;
-
-        if (citySuggestions.length !== 0) {
-            let c = citySuggestions[0];
-            let params = new URLSearchParams({
-                city: c.name, country: c.address.countryCode, region: c.region || '',
-                lat: c.latitude, lon: c.longitude, id: c.geonames_id || ''
-            });
-            location.href = "{% url "info_page" %}?" + params.toString();
-        }
-    }
-
-    function clearSuggestions() {
-        document.getElementById('suggestion-before').innerHTML = "";
-        document.getElementById('suggestion-after').innerHTML = "";
-        document.body.style.backgroundImage = null;
-        document.body.style.background = "#3F3F3F";
-        document.body.style.backgroundSize = null;
-        document.body.style.backgroundRepeat = null;
-    }
-
-    function getSuggestions(e){
-        if (e.key === 'Enter' || e.keyCode === 13) {
-            getCityList(redict_to_info);
+                img.src = data.path;
+            }).catch(function () {});
         }
 
-        document.getElementById("query").value = document.getElementById("query").value.split(' ').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
-        document.getElementById('suggestion').innerHTML =  '<b>' + document.getElementById("query").value + '</b>';
-        clearSuggestions();
+        function lookup() {
+            var query = input.value.trim();
+            if (!query) { results = []; render(); return; }
+            lastQuery = query;
+            fetchCities(query).then(function (found) {
+                if (query !== lastQuery) return;  // a newer search is in flight
+                results = found;
+                selected = found.length ? 0 : -1;
+                render();
+                clearTimeout(photoTimer);
+                photoTimer = setTimeout(function () { showPhoto(results[0]); }, 250);
+            });
+        }
 
-        clearTimeout(timeout);
-        timeout = setTimeout(getCityList, 700, reflectSuggestions);
-    }
+        function go(city) {
+            if (!city) return;
+            form.classList.add('loading');
+            var params = new URLSearchParams({
+                city: city.name, country: city.address.countryCode, region: city.region || '',
+                lat: city.latitude, lon: city.longitude, id: city.geonames_id || ''
+            });
+            window.location.href = INFO_URL + '?' + params.toString();
+        }
 
-    setTimeout(getSuggestions, 1000);
+        function goToQuery(query) {
+            input.value = query;
+            form.classList.add('loading');
+            fetchCities(query).then(function (found) {
+                if (found.length) { go(found[0]); } else { form.classList.remove('loading'); results = []; render(); }
+            });
+        }
+
+        input.addEventListener('input', function () {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(lookup, 250);
+        });
+
+        input.addEventListener('keydown', function (e) {
+            var count = Math.min(results.length, 6);
+            if (e.key === 'ArrowDown' && count) {
+                e.preventDefault(); selected = (selected + 1) % count; render(); showPhoto(results[selected]);
+            } else if (e.key === 'ArrowUp' && count) {
+                e.preventDefault(); selected = (selected - 1 + count) % count; render(); showPhoto(results[selected]);
+            } else if (e.key === 'Escape') {
+                list.hidden = true;
+            }
+        });
+
+        list.addEventListener('mousedown', function (e) {
+            var item = e.target.closest('li[data-index]');
+            if (item) { e.preventDefault(); go(results[Number(item.dataset.index)]); }
+        });
+        list.addEventListener('mouseover', function (e) {
+            var item = e.target.closest('li[data-index]');
+            if (item) showPhoto(results[Number(item.dataset.index)]);
+        });
+
+        input.addEventListener('blur', function () { setTimeout(function () { list.hidden = true; }, 120); });
+        input.addEventListener('focus', function () { if (input.value.trim()) render(); });
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var query = input.value.trim();
+            if (!query) { input.focus(); return; }
+            if (results.length && query === lastQuery) { go(results[Math.max(selected, 0)]); } else { goToQuery(query); }
+        });
+
+        document.querySelectorAll('.chip').forEach(function (chip) {
+            chip.addEventListener('click', function () { goToQuery(chip.dataset.city); });
+            chip.addEventListener('mouseenter', function () {
+                fetchCities(chip.dataset.city).then(function (found) { if (found.length) showPhoto(found[0]); });
+            });
+        });
+
+        // Clear the "loading" state if the visitor comes back with the browser's Back button.
+        window.addEventListener('pageshow', function () { form.classList.remove('loading'); });
+
+        input.focus();
+    })();
 </script>
 </body>
 </html>
