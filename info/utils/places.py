@@ -120,6 +120,9 @@ class WikidataPlaces(PlacesUtilBase):
               VALUES ?item {{ {items} }}
               VALUES ?class {{ {classes} }}
               ?item wdt:P31 ?class ; wikibase:sitelinks ?links .
+              # skip places that have closed, been dissolved or demolished
+              FILTER NOT EXISTS {{ ?item wdt:P576 [] }}
+              FILTER NOT EXISTS {{ ?item wdt:P3999 [] }}
               OPTIONAL {{ ?item wdt:P6375 ?address . }}
               OPTIONAL {{ ?item wdt:P18 ?img . }}
               SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en,mul". }}
@@ -150,6 +153,7 @@ class WikidataAirports(PlacesUtilBase):
                   }}
                   ?item wdt:P238 ?iata ; wdt:P31 ?c ; wikibase:sitelinks ?sl .
                   ?c wdt:P279* wd:Q1248784 .
+                  FILTER NOT EXISTS {{ ?item wdt:P3999 [] }}
                 }} GROUP BY ?item ORDER BY DESC(?links) LIMIT {limit * 2}
               }}
               OPTIONAL {{ ?item wdt:P18 ?img . }}
