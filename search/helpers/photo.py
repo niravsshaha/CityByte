@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 
 from django.conf import settings
 
-from search.utils.photo import PhotoUtilBase
-from search.utils.photo import Unsplash
+from search.utils.photo import WikidataPhoto, WikipediaPhoto
 from search.utils.url import URL
 
 
@@ -13,18 +12,18 @@ class CityPhotoHelperBase(ABC):
         pass
 
 
-class UnplashCityPhotoHelper(CityPhotoHelperBase):
-    def __init__(self, klass: PhotoUtilBase = None, url: URL = None):
-        if url is None:
-            klass = Unsplash
-            url = URL(**settings.UNSPLASH_CONFIG)
+class WikiCityPhotoHelper(CityPhotoHelperBase):
+    """City photo from Wikidata, falling back to the Wikipedia article's lead image."""
 
-        self._photo_util = klass(url=url)
+    def __init__(self):
+        self._sources = [
+            WikidataPhoto(url=URL(**settings.WIKIDATA_CONFIG)),
+            WikipediaPhoto(url=URL(**settings.WIKIPEDIA_CONFIG)),
+        ]
 
-    def get_city_photo(self, city: str):
-        photo_list = self._photo_util.get_photos(query=city)
-
-        if len(photo_list) == 0:
-            return None
-
-        return photo_list[1]["urls"]["regular"]
+    def get_city_photo(self, city: str, geonames_id=None):
+        for source in self._sources:
+            photos = source.get_photos(query=city, geonames_id=geonames_id)
+            if photos:
+                return photos[0]
+        return None
